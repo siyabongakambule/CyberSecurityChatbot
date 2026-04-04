@@ -1,0 +1,37 @@
+name: CI - Build CybersecurityChatbot
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build:
+    name: Build and Verify
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore CybersecurityChatbot/CybersecurityChatbot.csproj
+
+      - name: Build solution
+        run: dotnet build CybersecurityChatbot/CybersecurityChatbot.csproj --configuration Release --no-restore
+
+      - name: Publish
+        run: dotnet publish CybersecurityChatbot/CybersecurityChatbot.csproj --configuration Release --output ./publish --no-build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CybersecurityChatbot-Release
+          path: ./publish/
+

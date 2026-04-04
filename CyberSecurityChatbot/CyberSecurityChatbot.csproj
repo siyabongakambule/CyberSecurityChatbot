@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net8.0-windows</TargetFramework>
+		<RootNamespace>CybersecurityChatbot</RootNamespace>
+		<AssemblyName>CybersecurityChatbot</AssemblyName>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>disable</ImplicitUsings>
+		<LangVersion>latest</LangVersion>
+		<UseWPF>true</UseWPF>
+	</PropertyGroup>
+	<ItemGroup>
+	  <Content Include=".github\workflows\ci.yml.txt" />
+	</ItemGroup>
+	<ItemGroup>
+		<None Update="Resources\greeting.wav">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+</Project>
