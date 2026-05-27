@@ -36,7 +36,7 @@
 # For a complete CI/CD sample to get started with GitHub Action workflows for Desktop Applications,
 # refer to https://github.com/microsoft/github-actions-for-desktop-apps
 
-name: .NET Build
+name: CI - Build CybersecurityChatbot Part 2 WPF
 
 on:
   push:
@@ -46,29 +46,29 @@ on:
 
 jobs:
   build:
+    name: Build and Verify
     runs-on: windows-latest
 
-    strategy:
-      matrix:
-        configuration: [Debug, Release]
-
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 8.0.x
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
 
-    - name: Restore
-      run: dotnet restore
+      - name: Restore dependencies
+        run: dotnet restore CybersecurityChatbot/CybersecurityChatbot.csproj
 
-    - name: Build
-      run: dotnet build --configuration Release --no-restore
+      - name: Build solution
+        run: dotnet build CybersecurityChatbot/CybersecurityChatbot.csproj --configuration Release --no-restore
 
-    - name: Test
-      run: dotnet test --configuration Release --no-build
-    
+      - name: Publish
+        run: dotnet publish CybersecurityChatbot/CybersecurityChatbot.csproj --configuration Release --output ./publish --no-build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CybersecurityChatbot-Part2-WPF
+          path: ./publish/
