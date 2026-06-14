@@ -8,7 +8,7 @@ namespace CybersecurityChatbot
 {
     public partial class MainWindow : Window
     {
-        // ── Colours for chat bubbles ──────────────────────────────
+        // ── Colours ───────────────────────────────────────────────────────────────
         private readonly SolidColorBrush _botBg = new(Color.FromRgb(10, 32, 64));
         private readonly SolidColorBrush _userBg = new(Color.FromRgb(10, 48, 32));
         private readonly SolidColorBrush _botFg = new(Color.FromRgb(0, 220, 180));
@@ -24,19 +24,20 @@ namespace CybersecurityChatbot
             Loaded += MainWindow_Loaded;
         }
 
-        // ─────────────────────────────────────────────────────────
+        // ─────────────────────────────────────────────────────────────────────────
         //  Startup
-        // ─────────────────────────────────────────────────────────
+        // ─────────────────────────────────────────────────────────────────────────
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            // Initialise database
+            TaskManager.InitialiseDatabase();
+
             // Play voice greeting
             VoiceGreeting.Play();
 
-            // Show name entry dialog
-            NameDialog dialog = new NameDialog();
-            dialog.Owner = this;
-
+            // Show name dialog
+            NameDialog dialog = new NameDialog { Owner = this };
             bool? result = dialog.ShowDialog();
 
             if (result == true && !string.IsNullOrWhiteSpace(dialog.EnteredName))
@@ -52,16 +53,15 @@ namespace CybersecurityChatbot
             }
         }
 
-        // ─────────────────────────────────────────────────────────
-        //  Button events
-        // ─────────────────────────────────────────────────────────
+        // ─────────────────────────────────────────────────────────────────────────
+        //  Chat tab events
+        // ─────────────────────────────────────────────────────────────────────────
 
         private void SendButton_Click(object sender, RoutedEventArgs e) => SendMessage();
 
         private void InputBox_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Key == Key.Enter)
-                SendMessage();
+            if (e.Key == Key.Enter) SendMessage();
         }
 
         private void TopicButton_Click(object sender, RoutedEventArgs e)
@@ -79,59 +79,152 @@ namespace CybersecurityChatbot
             AddSystemMessage("Chat cleared. How can I help you, " + MemoryStore.UserName + "?");
         }
 
-        // ─────────────────────────────────────────────────────────
-        //  Send message
-        // ─────────────────────────────────────────────────────────
-
         private void SendMessage()
         {
             string input = InputBox.Text.Trim();
             InputBox.Clear();
-
             if (string.IsNullOrWhiteSpace(input)) return;
 
             AddUserBubble(input);
-
             string response = ConversationEngine.ProcessInput(input);
-
             AddBotBubble(response);
-
             UpdateMemoryBar();
-
+            RefreshActivityLog();
             ChatScrollViewer.ScrollToBottom();
             InputBox.Focus();
         }
 
-        // ─────────────────────────────────────────────────────────
+        // ─────────────────────────────────────────────────────────────────────────
+        //  Task tab events
+        // ─────────────────────────────────────────────────────────────────────────
+
+        private void AddTaskButton_Click(object sender, RoutedEventArgs e)
+        {
+            string title = TaskTitleBox.Text.Trim();
+            string desc = TaskDescBox.Text.Trim();
+
+            if (string.IsNullOrWhiteSpace(title))
+            {
+                TaskDisplay.Text = "  Please enter a task title.";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(desc))
+                desc = GenerateDescription(title);
+
+            DateTime? reminder = ReminderDatePicker.SelectedDate;
+            string result = TaskManager.AddTask(title, desc, reminder);
+            TaskDisplay.Text = result;
+            TaskTitleBox.Clear();
+            TaskDescBox.Clear();
+            ReminderDatePicker.SelectedDate = null;
+            RefreshActivityLog();
+        }
+
+        private void ViewTasksButton_Click(object sender, RoutedEventArgs e)
+        {
+            TaskDisplay.Text = TaskManager.GetAllTasks();
+            RefreshActivityLog();
+        }
+
+        private void CompleteTaskButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (int.TryParse(TaskIdBox.Text.Trim(), out int id))
+            {
+                TaskDisplay.Text = TaskManager.CompleteTask(id);
+                RefreshActivityLog();
+            }
+            else
+            {
+                TaskDisplay.Text = "  Please enter a valid Task ID in the box next to the buttons.";
+            }
+        }
+
+        private void DeleteTaskButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (int.TryParse(TaskIdBox.Text.Trim(), out int id))
+            {
+                TaskDisplay.Text = TaskManager.DeleteTask(id);
+                RefreshActivityLog();
+            }
+            else
+            {
+                TaskDisplay.Text = "  Please enter a valid Task ID in the box next to the buttons.";
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────
+        //  Quiz tab events
+        // ─────────────────────────────────────────────────────────────────────────
+
+        private void StartQuizButton_Click(object sender, RoutedEventArgs e)
+        {
+            QuizDisplay.Text = QuizEngine.StartQuiz();
+            QuizAnswerBox.Focus();
+        }
+
+        private void SubmitAnswerButton_Click(object sender, RoutedEventArgs e) => SubmitQuizAnswer();
+
+        private void QuizAnswerBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter) SubmitQuizAnswer();
+        }
+
+        private void SubmitQuizAnswer()
+        {
+            string answer = QuizAnswerBox.Text.Trim();
+            QuizAnswerBox.Clear();
+            if (string.IsNullOrWhiteSpace(answer)) return;
+
+            QuizDisplay.Text = QuizEngine.ProcessAnswer(answer);
+            RefreshActivityLog();
+            QuizAnswerBox.Focus();
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────
+        //  Activity log tab events
+        // ─────────────────────────────────────────────────────────────────────────
+
+        private void RefreshLogButton_Click(object sender, RoutedEventArgs e)
+        {
+            RefreshActivityLog();
+        }
+
+        private void RefreshActivityLog()
+        {
+            LogDisplay.Text = ActivityLog.GetLog();
+            LogScrollViewer.ScrollToBottom();
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────
         //  Welcome message
-        // ─────────────────────────────────────────────────────────
+        // ─────────────────────────────────────────────────────────────────────────
 
         private void ShowWelcomeMessage()
         {
             AddDivider("═");
             AddBotBubble(
                 $"  Welcome, {MemoryStore.UserName}! Great to have you here.\n\n" +
-                $"I am your Cybersecurity Awareness Assistant — here to help\n" +
-                $"keep YOU safe online in South Africa. 🇿🇦\n\n" +
-                $"  Topics I can help you with:\n" +
-                $"     Phishing and email scams\n" +
-                $"   Password safety\n" +
-                $"     Privacy and POPIA rights\n" +
-                $"     Online scams\n" +
-                $"     Malware and ransomware\n" +
-                $"     Safe browsing habits\n" +
-                $"     Two-factor authentication\n\n" +
-                $"  You can also say:\n" +
-                $"   'I am worried about scams'\n" +
-                $"   'I am interested in privacy'\n" +
-                $"   'Give me another tip'\n\n" +
-                $"Use the quick buttons above or just type below!");
+                $"I am your Cybersecurity Awareness Assistant \n\n" +
+                $"     Task Assistant — manage cybersecurity tasks\n" +
+                $"     Mini Quiz — test your cybersecurity knowledge\n" +
+                $"     NLP — understand natural language requests\n" +
+                $"     Activity Log — track all bot actions\n\n" +
+                $"    Phishing   Passwords   Privacy\n" +
+                $"    Malware   Browsing   2FA\n\n" +
+                $"Try saying:\n" +
+                $"   'Add task — Enable two-factor authentication'\n" +
+                $"   'Remind me to update my password in 3 days'\n" +
+                $"   'Start quiz'\n" +
+                $"   'Show activity log'\n\n" +
+                $"Use the tabs above or quick buttons to get started!");
             AddDivider("─");
+            ActivityLog.Add($"Session started — User: {MemoryStore.UserName}.");
         }
 
-        // ─────────────────────────────────────────────────────────
+        // ─────────────────────────────────────────────────────────────────────────
         //  Chat bubble builders
-        // ─────────────────────────────────────────────────────────
+        // ─────────────────────────────────────────────────────────────────────────
 
         private void AddBotBubble(string message)
         {
@@ -144,10 +237,8 @@ namespace CybersecurityChatbot
                 Margin = new Thickness(4, 4, 60, 4),
                 Padding = new Thickness(14, 10, 14, 10)
             };
-
             var stack = new StackPanel();
-
-            var label = new TextBlock
+            stack.Children.Add(new TextBlock
             {
                 Text = "  CyberBot",
                 Foreground = _borderCyan,
@@ -155,9 +246,8 @@ namespace CybersecurityChatbot
                 FontSize = 9,
                 FontWeight = FontWeights.Bold,
                 Margin = new Thickness(0, 0, 0, 4)
-            };
-
-            var text = new TextBlock
+            });
+            stack.Children.Add(new TextBlock
             {
                 Text = message,
                 Foreground = _botFg,
@@ -165,10 +255,7 @@ namespace CybersecurityChatbot
                 FontSize = 11,
                 TextWrapping = TextWrapping.Wrap,
                 LineHeight = 18
-            };
-
-            stack.Children.Add(label);
-            stack.Children.Add(text);
+            });
             container.Child = stack;
             ChatPanel.Children.Add(container);
         }
@@ -185,21 +272,18 @@ namespace CybersecurityChatbot
                 Padding = new Thickness(14, 10, 14, 10),
                 HorizontalAlignment = HorizontalAlignment.Stretch
             };
-
             var stack = new StackPanel();
-
-            var label = new TextBlock
+            stack.Children.Add(new TextBlock
             {
-                Text = $"👤  {MemoryStore.UserName}",
+                Text = $"  {MemoryStore.UserName}",
                 Foreground = _borderGreen,
                 FontFamily = new FontFamily("Consolas"),
                 FontSize = 9,
                 FontWeight = FontWeights.Bold,
                 Margin = new Thickness(0, 0, 0, 4),
                 HorizontalAlignment = HorizontalAlignment.Right
-            };
-
-            var text = new TextBlock
+            });
+            stack.Children.Add(new TextBlock
             {
                 Text = message,
                 Foreground = _userFg,
@@ -207,17 +291,14 @@ namespace CybersecurityChatbot
                 FontSize = 11,
                 TextWrapping = TextWrapping.Wrap,
                 HorizontalAlignment = HorizontalAlignment.Right
-            };
-
-            stack.Children.Add(label);
-            stack.Children.Add(text);
+            });
             container.Child = stack;
             ChatPanel.Children.Add(container);
         }
 
         private void AddSystemMessage(string message)
         {
-            var text = new TextBlock
+            ChatPanel.Children.Add(new TextBlock
             {
                 Text = "  " + message,
                 Foreground = _systemFg,
@@ -226,41 +307,49 @@ namespace CybersecurityChatbot
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(8, 4, 8, 4),
                 HorizontalAlignment = HorizontalAlignment.Center
-            };
-            ChatPanel.Children.Add(text);
+            });
         }
 
         private void AddDivider(string ch)
         {
-            var line = new TextBlock
+            ChatPanel.Children.Add(new TextBlock
             {
                 Text = new string(ch[0], 80),
                 Foreground = _divider,
                 FontFamily = new FontFamily("Consolas"),
                 FontSize = 8,
                 Margin = new Thickness(4, 2, 4, 2)
-            };
-            ChatPanel.Children.Add(line);
+            });
         }
 
-        // ─────────────────────────────────────────────────────────
-        //  Memory bar
-        // ─────────────────────────────────────────────────────────
+        // ─────────────────────────────────────────────────────────────────────────
+        //  Memory bar and helpers
+        // ─────────────────────────────────────────────────────────────────────────
 
         private void UpdateMemoryBar()
         {
             string favourite = MemoryStore.FavouriteTopic != null
-                ? ResponseEngine.GetTopicDisplayName(MemoryStore.FavouriteTopic)
-                : "None";
-
+                ? ResponseEngine.GetTopicDisplayName(MemoryStore.FavouriteTopic) : "None";
             string last = MemoryStore.LastTopic != null
-                ? ResponseEngine.GetTopicDisplayName(MemoryStore.LastTopic)
-                : "None";
-
+                ? ResponseEngine.GetTopicDisplayName(MemoryStore.LastTopic) : "None";
             MemoryBar.Text =
                 $"  Memory — Name: {MemoryStore.UserName}  |  " +
-                $"Favourite topic: {favourite}  |  " +
-                $"Last topic: {last}";
+                $"Favourite: {favourite}  |  Last topic: {last}  |  " +
+                $"Log entries: {ActivityLog.Count}";
+        }
+
+        private static string GenerateDescription(string title)
+        {
+            string lower = title.ToLower();
+            if (lower.Contains("two-factor") || lower.Contains("2fa"))
+                return "Enable two-factor authentication to add an extra security layer.";
+            if (lower.Contains("password"))
+                return "Update and strengthen passwords using a password manager.";
+            if (lower.Contains("privacy"))
+                return "Review privacy settings to protect your personal data.";
+            if (lower.Contains("backup"))
+                return "Back up important files using the 3-2-1 backup rule.";
+            return $"Complete cybersecurity task: {title}.";
         }
     }
 }

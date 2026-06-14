@@ -1,6 +1,4 @@
-﻿
-
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
@@ -12,6 +10,11 @@
 		<LangVersion>latest</LangVersion>
 		<UseWPF>true</UseWPF>
 	</PropertyGroup>
+
+	<!-- MySQL database package -->
+	<ItemGroup>
+		<PackageReference Include="MySql.Data" Version="8.3.0"/>
+	</ItemGroup>
 
 	<ItemGroup>
 		<None Update="Resources\greeting.wav">
