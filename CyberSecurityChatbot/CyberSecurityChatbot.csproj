@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+
 	<PropertyGroup>
-		<OutputType>Exe</OutputType>
+		<OutputType>WinExe</OutputType>
 		<TargetFramework>net8.0-windows</TargetFramework>
 		<RootNamespace>CybersecurityChatbot</RootNamespace>
 		<AssemblyName>CybersecurityChatbot</AssemblyName>
@@ -9,12 +10,16 @@
 		<LangVersion>latest</LangVersion>
 		<UseWPF>true</UseWPF>
 	</PropertyGroup>
+
+	<!-- MySQL database package -->
 	<ItemGroup>
-	  <Content Include=".github\workflows\ci.yml.txt" />
+		<PackageReference Include="MySql.Data" Version="8.3.0"/>
 	</ItemGroup>
+
 	<ItemGroup>
 		<None Update="Resources\greeting.wav">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
 	</ItemGroup>
+
 </Project>
